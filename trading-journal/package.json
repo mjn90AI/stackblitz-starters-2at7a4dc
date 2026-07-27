@@ -1,6 +1,6 @@
 {
   "name": "trading-journal",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -22,7 +22,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "electron-updater": "^6.3.9",
     "papaparse": "^5.4.1",
-    "lucide-react": "^0.383.0",
+    "lucide-react": "^0.400.0",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
