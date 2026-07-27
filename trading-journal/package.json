@@ -21,6 +21,9 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-updater": "^6.3.9"
+    "papaparse": "^5.4.1",
+    "lucide-react": "^0.383.0",
+    "recharts": "^2.12.7",
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.1.0",
