@@ -7,7 +7,8 @@ import Papa from "papaparse";
 import {
   LayoutDashboard, NotebookText, Layers, UploadCloud, Plus, Trash2,
   X, TrendingUp, TrendingDown, Save, ChevronDown, ChevronUp, Info,
-  Calendar as CalendarIcon, ChevronLeft, ChevronRight
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight,
+  Radio, Settings, Volume2, VolumeX
 } from "lucide-react";
 
 /* ---------------------------------------------------------
@@ -28,6 +29,59 @@ const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Space
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 const fmt$ = (n) => (n < 0 ? "-$" : "$") + Math.abs(n).toFixed(2);
 const fmtDate = (d) => { try { return new Date(d).toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" }); } catch { return d; } };
+
+/* ---------------------------------------------------------
+   ARES — voice assistant (browser TTS, no key needed)
+   News requires a free Finnhub API key, entered in Settings.
+--------------------------------------------------------- */
+
+function pickBritishFemaleVoice() {
+  const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  if (!voices.length) return null;
+  const gbVoices = voices.filter(v => /en-GB|en_GB/i.test(v.lang));
+  const preferredNames = ["hazel", "libby", "sonia", "female", "olivia"];
+  for (const name of preferredNames) {
+    const match = gbVoices.find(v => v.name.toLowerCase().includes(name));
+    if (match) return match;
+  }
+  if (gbVoices.length) return gbVoices[0];
+  const anyFemale = voices.find(v => /female/i.test(v.name));
+  return anyFemale || voices[0] || null;
+}
+
+function aresGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning, Sir.";
+  if (h < 17) return "Good afternoon, Sir.";
+  return "Good evening, Sir.";
+}
+
+function aresSpeak(lines) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const voice = pickBritishFemaleVoice();
+  lines.forEach((line) => {
+    const u = new SpeechSynthesisUtterance(line);
+    if (voice) u.voice = voice;
+    u.lang = "en-GB";
+    u.rate = 0.98;
+    u.pitch = 1.02;
+    window.speechSynthesis.speak(u);
+  });
+}
+
+async function fetchAresNews(apiKey) {
+  if (!apiKey) return { ok: false, reason: "no-key" };
+  try {
+    const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(apiKey)}`);
+    if (!res.ok) return { ok: false, reason: "bad-response" };
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) return { ok: false, reason: "empty" };
+    return { ok: true, items: data.slice(0, 4).map(d => d.headline).filter(Boolean) };
+  } catch (e) {
+    return { ok: false, reason: "network" };
+  }
+}
 
 const emptyTrade = () => ({
   id: uid(), date: new Date().toISOString().slice(0, 10), symbol: "", direction: "Long",
@@ -111,6 +165,12 @@ export default function TradingJournal() {
   const [importError, setImportError] = useState("");
   const fileRef = useRef(null);
 
+  // Ares assistant state
+  const [aresKey, setAresKey] = useState("");
+  const [showAresSettings, setShowAresSettings] = useState(false);
+  const [aresNote, setAresNote] = useState("");
+  const aresGreetedRef = useRef(false);
+
   // Load from persistent storage (plain browser localStorage — works in Electron)
   useEffect(() => {
     try {
@@ -118,6 +178,8 @@ export default function TradingJournal() {
       if (t) setTrades(JSON.parse(t));
       const s = localStorage.getItem("tj-setups");
       if (s) setSetups(JSON.parse(s));
+      const k = localStorage.getItem("ares-news-key");
+      if (k) setAresKey(k);
     } catch (e) {}
     setLoaded(true);
   }, []);
@@ -125,6 +187,38 @@ export default function TradingJournal() {
   // Persist
   useEffect(() => { if (loaded) localStorage.setItem("tj-trades", JSON.stringify(trades)); }, [trades, loaded]);
   useEffect(() => { if (loaded) localStorage.setItem("tj-setups", JSON.stringify(setups)); }, [setups, loaded]);
+  useEffect(() => { if (loaded) localStorage.setItem("ares-news-key", aresKey); }, [aresKey, loaded]);
+
+  async function runAresGreeting() {
+    setAresNote("Ares is speaking…");
+    const lines = [aresGreeting(), "Let's dive into the news."];
+    const newsResult = await fetchAresNews(aresKey);
+    if (newsResult.ok) {
+      newsResult.items.forEach(h => lines.push(h));
+      setAresNote("");
+    } else if (newsResult.reason === "no-key") {
+      lines.push("I don't have a news source connected yet — add a Finnhub key in Ares settings and I'll bring you the headlines next time.");
+      setAresNote("No news key set — click Ares to add one.");
+    } else {
+      lines.push("I couldn't reach the markets just now — please check your connection or news key.");
+      setAresNote("Couldn't fetch news — check connection or key.");
+    }
+    aresSpeak(lines);
+  }
+
+  // Greet once per app launch, after voices are ready
+  useEffect(() => {
+    if (!loaded || aresGreetedRef.current) return;
+    aresGreetedRef.current = true;
+    const trigger = () => setTimeout(() => runAresGreeting(), 500);
+    if (window.speechSynthesis && window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = trigger;
+      // Fallback in case the event never fires
+      setTimeout(trigger, 1200);
+    } else {
+      trigger();
+    }
+  }, [loaded, aresKey]);
 
   const stats = useMemo(() => {
     const closed = trades.filter(t => t.pnl !== "" && !isNaN(parseFloat(t.pnl)));
@@ -280,6 +374,17 @@ export default function TradingJournal() {
         <div style={{ marginTop: "auto", padding: "12px 8px 4px", fontSize: 11, color: COLORS.low, lineHeight: 1.5 }}>
           {trades.length} trades logged<br />{setups.length} setups tracked
         </div>
+        <div className="navitem" onClick={() => setShowAresSettings(true)}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "8px 8px", borderRadius: 8, cursor: "pointer",
+            marginTop: 4, border: `1px solid ${COLORS.border}`, background: COLORS.bg1,
+          }}>
+          <Radio size={14} color={COLORS.info} />
+          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.25 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: COLORS.hi }}>Ares</span>
+            <span style={{ fontSize: 10, color: COLORS.low }}>{aresNote || "Voice briefing • click to configure"}</span>
+          </div>
+        </div>
         <div style={{ padding: "10px 8px 0", marginTop: 6, borderTop: `1px solid ${COLORS.border}`, fontSize: 10.5, color: COLORS.low, letterSpacing: 0.2 }}>
           Created by M. Narinesingh
         </div>
@@ -321,6 +426,14 @@ export default function TradingJournal() {
       )}
       {showSetupForm && (
         <SetupForm setup={editingSetup} onSave={saveSetup} onClose={() => { setShowSetupForm(false); setEditingSetup(null); }} />
+      )}
+      {showAresSettings && (
+        <AresSettings
+          aresKey={aresKey}
+          setAresKey={setAresKey}
+          onReplay={() => runAresGreeting()}
+          onClose={() => setShowAresSettings(false)}
+        />
       )}
     </div>
   );
@@ -685,6 +798,28 @@ function Modal({ title, children, onClose }) {
         {children}
       </div>
     </div>
+  );
+}
+
+function AresSettings({ aresKey, setAresKey, onReplay, onClose }) {
+  const [draft, setDraft] = useState(aresKey);
+  return (
+    <Modal title="Ares — Voice Briefing" onClose={onClose}>
+      <p style={{ color: COLORS.mid, fontSize: 13, lineHeight: 1.6, margin: "0 0 16px" }}>
+        Ares greets you on launch and reads a short market news briefing using your computer's
+        built-in voice engine. The voice works with no setup — news needs a free Finnhub API key.
+      </p>
+      <Field label="Finnhub API Key" hint="Free at finnhub.io/register — no card required. Left blank, Ares still greets you, just without news.">
+        <input style={inputStyle} placeholder="Paste your Finnhub API key" value={draft} onChange={(e) => setDraft(e.target.value)} />
+      </Field>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 20 }}>
+        <Btn onClick={onReplay}><Volume2 size={14} /> Replay Briefing</Btn>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={() => { setAresKey(draft); onClose(); }}><Save size={14} /> Save</Btn>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
