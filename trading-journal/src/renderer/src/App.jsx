@@ -39,7 +39,12 @@ function pickBritishFemaleVoice() {
   const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
   if (!voices.length) return null;
   const gbVoices = voices.filter(v => /en-GB|en_GB/i.test(v.lang));
-  const preferredNames = ["hazel", "libby", "sonia", "female", "olivia"];
+  // Prefer modern neural "Natural"/"Online" voices first — legacy SAPI voices (Hazel, David, Zira)
+  // sound noticeably more robotic. Windows 11 ships these free but they must be installed once
+  // via Settings > Time & Language > Speech > Manage voices.
+  const natural = gbVoices.find(v => /natural|online/i.test(v.name));
+  if (natural) return natural;
+  const preferredNames = ["libby", "sonia", "hazel", "female", "olivia"];
   for (const name of preferredNames) {
     const match = gbVoices.find(v => v.name.toLowerCase().includes(name));
     if (match) return match;
@@ -64,8 +69,8 @@ function aresSpeak(lines) {
     const u = new SpeechSynthesisUtterance(line);
     if (voice) u.voice = voice;
     u.lang = "en-GB";
-    u.rate = 0.98;
-    u.pitch = 1.02;
+    u.rate = 0.92;
+    u.pitch = 1.0;
     window.speechSynthesis.speak(u);
   });
 }
@@ -808,6 +813,11 @@ function AresSettings({ aresKey, setAresKey, onReplay, onClose }) {
       <p style={{ color: COLORS.mid, fontSize: 13, lineHeight: 1.6, margin: "0 0 16px" }}>
         Ares greets you on launch and reads a short market news briefing using your computer's
         built-in voice engine. The voice works with no setup — news needs a free Alpha Vantage API key.
+      </p>
+      <p style={{ color: COLORS.low, fontSize: 12, lineHeight: 1.6, margin: "0 0 16px", padding: "10px 12px", background: COLORS.bg2, borderRadius: 8, border: `1px solid ${COLORS.border}` }}>
+        Sound robotic? Windows' default voices are older-generation. For a smoother, natural British voice — free,
+        no code needed — open Windows Settings → Time &amp; Language → Speech → Manage voices → Add voices →
+        English (United Kingdom), and pick one marked "Natural" (e.g. Libby or Sonia). Restart the app afterward.
       </p>
       <Field label="Alpha Vantage API Key" hint="Free instantly at alphavantage.co/support/#api-key — email only, no card. Left blank, Ares still greets you, just without news.">
         <input style={inputStyle} placeholder="Paste your Alpha Vantage API key" value={draft} onChange={(e) => setDraft(e.target.value)} />
