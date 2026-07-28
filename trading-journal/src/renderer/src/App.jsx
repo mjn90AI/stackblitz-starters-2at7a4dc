@@ -6,7 +6,8 @@ import {
 import Papa from "papaparse";
 import {
   LayoutDashboard, NotebookText, Layers, UploadCloud, Plus, Trash2,
-  X, TrendingUp, TrendingDown, Save, ChevronDown, ChevronUp, Info
+  X, TrendingUp, TrendingDown, Save, ChevronDown, ChevronUp, Info,
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 /* ---------------------------------------------------------
@@ -84,7 +85,10 @@ function Btn({ children, onClick, variant = "ghost", style, type = "button" }) {
 
 function StatCard({ label, value, sub, positive }) {
   return (
-    <div style={{ background: COLORS.bg1, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px 18px", flex: 1, minWidth: 150 }}>
+    <div className="card-hover" style={{
+      background: `linear-gradient(160deg, ${COLORS.bg1} 0%, ${COLORS.bg2}66 100%)`,
+      border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "16px 18px", flex: 1, minWidth: 150,
+    }}>
       <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: COLORS.mid, fontWeight: 600, marginBottom: 8 }}>{label}</div>
       <div style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 22, fontWeight: 600, color: positive === undefined ? COLORS.hi : positive ? COLORS.long : COLORS.short }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: COLORS.low, marginTop: 4 }}>{sub}</div>}
@@ -216,6 +220,7 @@ export default function TradingJournal() {
 
   const NAV = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "calendar", label: "Calendar", icon: CalendarIcon },
     { id: "log", label: "Trade Log", icon: NotebookText },
     { id: "setups", label: "Setup Library", icon: Layers },
     { id: "import", label: "Import / Sync", icon: UploadCloud },
@@ -223,7 +228,8 @@ export default function TradingJournal() {
 
   return (
     <div style={{
-      background: COLORS.bg0, minHeight: "100%", display: "flex", color: COLORS.hi,
+      background: `radial-gradient(1200px 600px at 15% -10%, #131C26 0%, ${COLORS.bg0} 55%)`,
+      minHeight: "100%", display: "flex", color: COLORS.hi,
       fontFamily: "Inter, sans-serif", fontSize: 14,
     }}>
       <style>{`
@@ -237,19 +243,30 @@ export default function TradingJournal() {
         tr:hover td { background: ${COLORS.bg1}; }
         input:focus, textarea:focus, select:focus { border-color: ${COLORS.info} !important; }
         input[type=file] { color: ${COLORS.mid}; }
+        .navitem:hover { background: ${COLORS.bg2}; color: ${COLORS.hi} !important; }
+        .card-hover { transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+        .card-hover:hover { transform: translateY(-1px); border-color: ${COLORS.bg3} !important; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
       `}</style>
 
       {/* Sidebar */}
-      <div style={{ width: 220, borderRight: `1px solid ${COLORS.border}`, padding: "22px 14px", display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 8px 22px" }}>
-          <CandleIcon color={COLORS.long} size={16} />
-          <span style={{ fontFamily: "Space Grotesk, sans-serif", fontWeight: 700, fontSize: 16, letterSpacing: 0.2 }}>Edgework</span>
+      <div style={{ width: 220, borderRight: `1px solid ${COLORS.border}`, padding: "22px 14px", display: "flex", flexDirection: "column", gap: 4, flexShrink: 0, background: "rgba(255,255,255,0.012)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "0 8px 22px" }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+            background: `linear-gradient(135deg, ${COLORS.long}22, ${COLORS.info}22)`, border: `1px solid ${COLORS.border}`,
+          }}>
+            <CandleIcon color={COLORS.long} size={13} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
+            <span style={{ fontFamily: "Space Grotesk, sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: 0.2 }}>WBP</span>
+            <span style={{ fontSize: 10.5, color: COLORS.mid, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase" }}>Trade Journal</span>
+          </div>
         </div>
         {NAV.map(n => {
           const Icon = n.icon;
           const active = tab === n.id;
           return (
-            <div key={n.id} onClick={() => setTab(n.id)}
+            <div key={n.id} className="navitem" onClick={() => setTab(n.id)}
               style={{
                 display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8,
                 cursor: "pointer", color: active ? COLORS.hi : COLORS.mid,
@@ -260,14 +277,18 @@ export default function TradingJournal() {
             </div>
           );
         })}
-        <div style={{ marginTop: "auto", padding: "12px 8px", fontSize: 11, color: COLORS.low, lineHeight: 1.5 }}>
+        <div style={{ marginTop: "auto", padding: "12px 8px 4px", fontSize: 11, color: COLORS.low, lineHeight: 1.5 }}>
           {trades.length} trades logged<br />{setups.length} setups tracked
+        </div>
+        <div style={{ padding: "10px 8px 0", marginTop: 6, borderTop: `1px solid ${COLORS.border}`, fontSize: 10.5, color: COLORS.low, letterSpacing: 0.2 }}>
+          Created by M. Narinesingh
         </div>
       </div>
 
       {/* Main */}
       <div style={{ flex: 1, padding: "26px 32px", overflowY: "auto", maxHeight: "100vh" }}>
         {tab === "dashboard" && <Dashboard stats={stats} trades={trades} />}
+        {tab === "calendar" && <CalendarView trades={trades} />}
         {tab === "log" && (
           <TradeLog
             trades={trades} setTrades={setTrades}
@@ -309,7 +330,10 @@ function Dashboard({ stats, trades }) {
   const recent = trades.slice(0, 6);
   return (
     <div>
-      <h1 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 22, margin: "0 0 4px" }}>Performance</h1>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
+        <h1 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 22, margin: 0 }}>Performance</h1>
+        <span style={{ height: 5, width: 5, borderRadius: "50%", background: COLORS.long, boxShadow: `0 0 8px ${COLORS.long}` }} />
+      </div>
       <p style={{ color: COLORS.mid, margin: "0 0 20px", fontSize: 13 }}>Everything below reflects trades with a logged P&L.</p>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
@@ -320,7 +344,7 @@ function Dashboard({ stats, trades }) {
         <StatCard label="Avg Loss" value={fmt$(stats.avgLoss)} positive={false} />
       </div>
 
-      <div style={{ background: COLORS.bg1, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "18px 20px", marginBottom: 20 }}>
+      <div className="card-hover" style={{ background: `linear-gradient(160deg, ${COLORS.bg1} 0%, ${COLORS.bg2}55 100%)`, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "18px 20px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, color: COLORS.mid, fontWeight: 600, marginBottom: 10 }}>Equity Curve</div>
         {stats.curve.length > 1 ? (
           <ResponsiveContainer width="100%" height={220}>
@@ -345,7 +369,7 @@ function Dashboard({ stats, trades }) {
         )}
       </div>
 
-      <div style={{ background: COLORS.bg1, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "18px 20px" }}>
+      <div className="card-hover" style={{ background: `linear-gradient(160deg, ${COLORS.bg1} 0%, ${COLORS.bg2}55 100%)`, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "18px 20px" }}>
         <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, color: COLORS.mid, fontWeight: 600, marginBottom: 10 }}>Recent Trades</div>
         {recent.length ? (
           <table>
@@ -364,6 +388,117 @@ function Dashboard({ stats, trades }) {
             </tbody>
           </table>
         ) : <EmptyState text="No trades yet — add one from the Trade Log tab." />}
+      </div>
+    </div>
+  );
+}
+
+function CalendarView({ trades }) {
+  const [cursor, setCursor] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+
+  const dayStats = useMemo(() => {
+    const map = {};
+    for (const t of trades) {
+      if (t.pnl === "" || isNaN(parseFloat(t.pnl))) continue;
+      const key = t.date;
+      if (!map[key]) map[key] = { pnl: 0, count: 0 };
+      map[key].pnl += parseFloat(t.pnl);
+      map[key].count += 1;
+    }
+    return map;
+  }, [trades]);
+
+  const year = cursor.getFullYear(), month = cursor.getMonth();
+  const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const startWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+  const pad = (n) => String(n).padStart(2, "0");
+  const keyFor = (d) => `${year}-${pad(month + 1)}-${pad(d)}`;
+
+  let monthTotal = 0;
+  for (let d = 1; d <= daysInMonth; d++) { const s = dayStats[keyFor(d)]; if (s) monthTotal += s.pnl; }
+
+  const today = new Date();
+  const isToday = (d) => d && today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+
+  const goToday = () => { const now = new Date(); setCursor(new Date(now.getFullYear(), now.getMonth(), 1)); };
+  const prevMonth = () => setCursor(new Date(year, month - 1, 1));
+  const nextMonth = () => setCursor(new Date(year, month + 1, 1));
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 22, margin: "0 0 4px" }}>Calendar</h1>
+          <p style={{ color: COLORS.mid, margin: 0, fontSize: 13 }}>Daily P&L at a glance — green for winning days, red for losing days.</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Btn onClick={goToday}>Today</Btn>
+          <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <div onClick={prevMonth} style={{ padding: 8, borderRadius: 8, cursor: "pointer", color: COLORS.mid, border: `1px solid ${COLORS.border}` }}><ChevronLeft size={15} /></div>
+            <div onClick={nextMonth} style={{ padding: 8, borderRadius: 8, cursor: "pointer", color: COLORS.mid, border: `1px solid ${COLORS.border}`, marginLeft: 4 }}><ChevronRight size={15} /></div>
+          </div>
+          <span style={{ fontFamily: "Space Grotesk, sans-serif", fontWeight: 600, fontSize: 16 }}>{monthLabel}</span>
+          <span style={{ fontFamily: "IBM Plex Mono, monospace", fontWeight: 600, fontSize: 15, color: monthTotal >= 0 ? COLORS.long : COLORS.short }}>{fmt$(monthTotal)}</span>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr) 130px", gap: 8 }}>
+        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(d => (
+          <div key={d} style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, color: COLORS.low, textAlign: "center", paddingBottom: 2 }}>{d}</div>
+        ))}
+        <div />
+
+        {weeks.map((week, wi) => {
+          let weekPnl = 0, weekCount = 0, weekHasData = false;
+          week.forEach(d => { if (d) { const s = dayStats[keyFor(d)]; if (s) { weekPnl += s.pnl; weekCount += s.count; weekHasData = true; } } });
+          return (
+            <React.Fragment key={wi}>
+              {week.map((d, di) => {
+                if (!d) return <div key={di} style={{ minHeight: 92, borderRadius: 10, background: "transparent" }} />;
+                const s = dayStats[keyFor(d)];
+                const win = s && s.pnl > 0, loss = s && s.pnl < 0;
+                return (
+                  <div key={di} className="card-hover" style={{
+                    minHeight: 92, borderRadius: 10, padding: "8px 10px",
+                    background: win ? "rgba(51,214,160,0.14)" : loss ? "rgba(255,107,122,0.14)" : COLORS.bg1,
+                    border: `1px solid ${win ? "rgba(51,214,160,0.35)" : loss ? "rgba(255,107,122,0.35)" : COLORS.border}`,
+                    outline: isToday(d) ? `1.5px solid ${COLORS.info}` : "none",
+                    display: "flex", flexDirection: "column", justifyContent: "space-between",
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: isToday(d) ? 700 : 500, color: isToday(d) ? COLORS.info : COLORS.mid }}>{d}</span>
+                    {s && (
+                      <div>
+                        <div style={{ fontFamily: "IBM Plex Mono, monospace", fontWeight: 700, fontSize: 13.5, color: win ? COLORS.long : COLORS.short }}>{fmt$(s.pnl)}</div>
+                        <div style={{ fontSize: 10.5, color: COLORS.mid }}>{s.count} trade{s.count === 1 ? "" : "s"}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{
+                minHeight: 92, borderRadius: 10, padding: "8px 12px", display: "flex", flexDirection: "column", justifyContent: "center",
+                background: weekHasData ? (weekPnl >= 0 ? "rgba(51,214,160,0.08)" : "rgba(255,107,122,0.08)") : "transparent",
+                border: weekHasData ? `1px solid ${COLORS.border}` : "1px solid transparent",
+              }}>
+                {weekHasData ? (
+                  <>
+                    <div style={{ fontFamily: "IBM Plex Mono, monospace", fontWeight: 700, fontSize: 14, color: weekPnl >= 0 ? COLORS.long : COLORS.short }}>{fmt$(weekPnl)}</div>
+                    <div style={{ fontSize: 10.5, color: COLORS.mid, marginTop: 2 }}>{weekCount} trade{weekCount === 1 ? "" : "s"}</div>
+                  </>
+                ) : null}
+              </div>
+            </React.Fragment>
+          );
+        })}
       </div>
     </div>
   );
