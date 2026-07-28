@@ -32,7 +32,7 @@ const fmtDate = (d) => { try { return new Date(d).toLocaleDateString(undefined, 
 
 /* ---------------------------------------------------------
    ARES — voice assistant (browser TTS, no key needed)
-   News requires a free Finnhub API key, entered in Settings.
+   News requires a free Alpha Vantage API key, entered in Settings.
 --------------------------------------------------------- */
 
 function pickBritishFemaleVoice() {
@@ -73,11 +73,11 @@ function aresSpeak(lines) {
 async function fetchAresNews(apiKey) {
   if (!apiKey) return { ok: false, reason: "no-key" };
   try {
-    const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(apiKey)}`);
+    const res = await fetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=financial_markets&limit=6&apikey=${encodeURIComponent(apiKey)}`);
     if (!res.ok) return { ok: false, reason: "bad-response" };
     const data = await res.json();
-    if (!Array.isArray(data) || !data.length) return { ok: false, reason: "empty" };
-    return { ok: true, items: data.slice(0, 4).map(d => d.headline).filter(Boolean) };
+    if (data.Note || data.Information || !data.feed || !Array.isArray(data.feed) || !data.feed.length) return { ok: false, reason: "empty" };
+    return { ok: true, items: data.feed.slice(0, 4).map(d => d.title).filter(Boolean) };
   } catch (e) {
     return { ok: false, reason: "network" };
   }
@@ -178,7 +178,7 @@ export default function TradingJournal() {
       if (t) setTrades(JSON.parse(t));
       const s = localStorage.getItem("tj-setups");
       if (s) setSetups(JSON.parse(s));
-      const k = localStorage.getItem("ares-news-key");
+      const k = localStorage.getItem("ares-av-key");
       if (k) setAresKey(k);
     } catch (e) {}
     setLoaded(true);
@@ -187,7 +187,7 @@ export default function TradingJournal() {
   // Persist
   useEffect(() => { if (loaded) localStorage.setItem("tj-trades", JSON.stringify(trades)); }, [trades, loaded]);
   useEffect(() => { if (loaded) localStorage.setItem("tj-setups", JSON.stringify(setups)); }, [setups, loaded]);
-  useEffect(() => { if (loaded) localStorage.setItem("ares-news-key", aresKey); }, [aresKey, loaded]);
+  useEffect(() => { if (loaded) localStorage.setItem("ares-av-key", aresKey); }, [aresKey, loaded]);
 
   async function runAresGreeting() {
     setAresNote("Ares is speaking…");
@@ -197,7 +197,7 @@ export default function TradingJournal() {
       newsResult.items.forEach(h => lines.push(h));
       setAresNote("");
     } else if (newsResult.reason === "no-key") {
-      lines.push("I don't have a news source connected yet — add a Finnhub key in Ares settings and I'll bring you the headlines next time.");
+      lines.push("I don't have a news source connected yet — add an Alpha Vantage key in Ares settings and I'll bring you the headlines next time.");
       setAresNote("No news key set — click Ares to add one.");
     } else {
       lines.push("I couldn't reach the markets just now — please check your connection or news key.");
@@ -807,10 +807,10 @@ function AresSettings({ aresKey, setAresKey, onReplay, onClose }) {
     <Modal title="Ares — Voice Briefing" onClose={onClose}>
       <p style={{ color: COLORS.mid, fontSize: 13, lineHeight: 1.6, margin: "0 0 16px" }}>
         Ares greets you on launch and reads a short market news briefing using your computer's
-        built-in voice engine. The voice works with no setup — news needs a free Finnhub API key.
+        built-in voice engine. The voice works with no setup — news needs a free Alpha Vantage API key.
       </p>
-      <Field label="Finnhub API Key" hint="Free at finnhub.io/register — no card required. Left blank, Ares still greets you, just without news.">
-        <input style={inputStyle} placeholder="Paste your Finnhub API key" value={draft} onChange={(e) => setDraft(e.target.value)} />
+      <Field label="Alpha Vantage API Key" hint="Free instantly at alphavantage.co/support/#api-key — email only, no card. Left blank, Ares still greets you, just without news.">
+        <input style={inputStyle} placeholder="Paste your Alpha Vantage API key" value={draft} onChange={(e) => setDraft(e.target.value)} />
       </Field>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 20 }}>
         <Btn onClick={onReplay}><Volume2 size={14} /> Replay Briefing</Btn>
